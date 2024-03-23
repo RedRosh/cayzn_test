@@ -47,6 +47,11 @@ class Service:
         """The ordered list of stations where the service stops."""
         return self._calculate_itinerary()
     
+    def load_passenger_manifest(self, passengers: List["Passenger"]) -> None:
+        for passenger in passengers:
+            od = next(od for od in self.ods if od.origin == passenger.origin and od.destination == passenger.destination)
+            od.passengers.append(passenger)
+    
     def load_itinerary(self, itinerary: List["Station"]) -> None:
         self.load_legs(itinerary)
         self.load_ods(itinerary)
@@ -203,19 +208,19 @@ od_lpd_msc = next(od for od in service.ods if od.origin == lpd and od.destinatio
 # belonging to the service. The signature of this method should be:
 # load_passenger_manifest(self, passengers: List["Passenger"]) -> None:
 
-# service.load_passenger_manifest(
-#     [
-#         Passenger(ply, lpd, -30, 20),
-#         Passenger(ply, lpd, -25, 30),
-#         Passenger(ply, lpd, -20, 40),
-#         Passenger(ply, lpd, -20, 40),
-#         Passenger(ply, msc, -10, 50),
-#     ]
-# )
-# od_ply_lpd, od_ply_msc, od_lpd_msc = service.ods
-# assert len(od_ply_lpd.passengers) == 4
-# assert len(od_ply_msc.passengers) == 1
-# assert len(od_lpd_msc.passengers) == 0
+service.load_passenger_manifest(
+    [
+        Passenger(ply, lpd, -30, 20),
+        Passenger(ply, lpd, -25, 30),
+        Passenger(ply, lpd, -20, 40),
+        Passenger(ply, lpd, -20, 40),
+        Passenger(ply, msc, -10, 50),
+    ]
+)
+od_ply_lpd, od_ply_msc, od_lpd_msc = service.ods
+assert len(od_ply_lpd.passengers) == 4
+assert len(od_ply_msc.passengers) == 1
+assert len(od_lpd_msc.passengers) == 0
 
 # 5. Write a property named `passengers` in `Leg` class that returns passengers occupying a seat on this leg.
 
