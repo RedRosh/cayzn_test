@@ -14,6 +14,7 @@
     Good luck!
 """
 
+from collections import defaultdict
 import datetime
 from typing import List,Dict, Tuple
 
@@ -151,6 +152,21 @@ class OD:
         origin_index = itinerary.index(self.origin)
         destination_index = itinerary.index(self.destination)
         return self.service.legs[origin_index:destination_index]
+    
+    def history(self):
+        history_map = defaultdict(lambda: [0, 0.0])
+
+        for passenger in self.passengers:
+            history_map[passenger.sale_day_x][0] += 1
+            history_map[passenger.sale_day_x][1] += passenger.price
+
+        history_list = sorted([[sale_day_x, info[0], info[1]] for sale_day_x, info in history_map.items()])
+        
+        for i  in range(1,len(history_list)):
+            history_list[i][1] += history_list[i-1][1] 
+            history_list[i][2] += history_list[i-1][2] 
+
+        return history_list
         
         
         
@@ -236,11 +252,11 @@ assert len(service.legs[1].passengers) == 1
 # list of data point, each data point is a three elements array: [day_x, cumulative number of bookings, cumulative
 # revenue].
 
-# history = od_ply_lpd.history()
-# assert len(history) == 3
-# assert history[0] == [-30, 1, 20]
-# assert history[1] == [-25, 2, 50]
-# assert history[2] == [-20, 4, 130]
+history = od_ply_lpd.history()
+assert len(history) == 3
+assert history[0] == [-30, 1, 20]
+assert history[1] == [-25, 2, 50]
+assert history[2] == [-20, 4, 130]
 
 # 7. In the final solution, we have a demand matrix estimated using machine learning that gives us the estimated demand for any day_x and price 
 # The goal of this question is to write an algorithm that find the optimal path to maximize the revenue through this matrix
