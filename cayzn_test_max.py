@@ -126,6 +126,11 @@ class Leg:
         self.service = service
         self.origin = origin
         self.destination = destination
+    
+    @property
+    def passengers(self) -> List["Passenger"]:
+        passengers_set = set({passenger for od in self.service.ods if self in od.legs for passenger in od.passengers})
+        return list(passengers_set)
 
 
 class OD:
@@ -224,8 +229,8 @@ assert len(od_lpd_msc.passengers) == 0
 
 # 5. Write a property named `passengers` in `Leg` class that returns passengers occupying a seat on this leg.
 
-# assert len(service.legs[0].passengers) == 5
-# assert len(service.legs[1].passengers) == 1
+assert len(service.legs[0].passengers) == 5
+assert len(service.legs[1].passengers) == 1
 
 # 6. We want to generate a report about sales made each day, write a `history()` method in `OD` class that returns a
 # list of data point, each data point is a three elements array: [day_x, cumulative number of bookings, cumulative
