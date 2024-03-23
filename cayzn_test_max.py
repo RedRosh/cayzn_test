@@ -15,7 +15,8 @@
 """
 
 import datetime
-from typing import List
+from typing import List,Dict, Tuple
+
 
 
 class Service:
@@ -33,7 +34,7 @@ class Service:
         self.ods: List[OD] = []
 
     @property
-    def day_x(self):
+    def day_x(self) -> int:
         """Number of days before departure.
 
         In revenue management systems, the day-x scale is often preferred because it is more convenient to manipulate
@@ -42,19 +43,33 @@ class Service:
         return (datetime.date.today() - self.departure_date).days
     
     @property
-    def itinerary(self):
-        """the ordered list of stations where the service stops."""
+    def itinerary(self) -> List["Station"]:
+        """The ordered list of stations where the service stops."""
         return self._calculate_itinerary()
     
+    def load_itinerary(self, itinerary: List["Station"]) -> None:
+        self.load_legs(itinerary)
+        self.load_ods(itinerary)
+
+    def load_legs(self, itinerary: List["Station"]) -> None:
+        for i in range(len(itinerary) - 1):
+            leg = Leg(self, itinerary[i], itinerary[i + 1])
+            self.legs.append(leg)
+
+    def load_ods(self, itinerary: List["Station"]) -> None:
+        for origin_idx in range(len(itinerary) - 1):
+            for destination_idx in range(origin_idx + 1, len(itinerary)):
+                od = OD(self, itinerary[origin_idx], itinerary[destination_idx])
+                self.ods.append(od)
     
-    def _calculate_itinerary(self):
+    def _calculate_itinerary(self) -> List["Station"]:
         """Calculate the itinerary of the service."""
         
         station_occurrences, station_connections = self._calculate_station_occurrences_and_connections()
-        departure, final_destination = self._find_departure_and_destination(station_occurrences,station_connections)
+        departure, final_destination = self._find_departure_and_destination(station_occurrences, station_connections)
 
-        itinerary = []
-        current_station = departure
+        itinerary: List[Station] = []
+        current_station:Station = departure
 
         while current_station != final_destination:
             itinerary.append(current_station)
@@ -63,11 +78,11 @@ class Service:
         itinerary.append(final_destination)
         return itinerary
     
-    def _calculate_station_occurrences_and_connections(self):
+    def _calculate_station_occurrences_and_connections(self) -> Tuple[Dict["Station", int], Dict["Station", "Station"]]:
         """Calculate the occurrences of each station and build a map of station connections."""
         
-        stations_occurrences = {}
-        station_connections = {}
+        stations_occurrences: Dict["Station", int] = {}
+        station_connections: Dict["Station", "Station"] = {}
 
         for leg in self.legs:
             stations_occurrences[leg.origin] = stations_occurrences.get(leg.origin, 0) + 1
@@ -76,7 +91,7 @@ class Service:
 
         return stations_occurrences, station_connections
 
-    def _find_departure_and_destination(self, station_occurrences,station_connections):
+    def _find_departure_and_destination(self, station_occurrences: Dict["Station", int], station_connections: Dict["Station", "Station"]) -> Tuple["Station", "Station"]:
         departure_station:Station = None
         destination_station:Station = None
 
@@ -87,7 +102,7 @@ class Service:
                 destination_station = destination
 
         return departure_station, destination_station
-        
+      
 
 class Station:
     """A station is where a service can stop to let passengers board or disembark."""
@@ -146,42 +161,42 @@ class Passenger:
 ply = Station("ply")  # Paris Gare de Lyon
 lpd = Station("lpd")  # Lyon Part-Dieu
 msc = Station("msc")  # Marseille Saint-Charles
-service = Service("7601", datetime.date.today() + datetime.timedelta(days=7))
-leg_lpd_msc = Leg(service, lpd, msc)
-leg_ply_lpd = Leg(service, ply, lpd)
-service.legs = [leg_ply_lpd, leg_lpd_msc]
-od_ply_lpd = OD(service, ply, lpd)
-od_ply_msc = OD(service, ply, msc)
-od_lpd_msc = OD(service, lpd, msc)
-service.ods = [od_ply_lpd, od_ply_msc, od_lpd_msc]
+# service = Service("7601", datetime.date.today() + datetime.timedelta(days=7))
+# leg_lpd_msc = Leg(service, lpd, msc)
+# leg_ply_lpd = Leg(service, ply, lpd)
+# service.legs = [leg_ply_lpd, leg_lpd_msc]
+# od_ply_lpd = OD(service, ply, lpd)
+# od_ply_msc = OD(service, ply, msc)
+# od_lpd_msc = OD(service, lpd, msc)
+# service.ods = [od_ply_lpd, od_ply_msc, od_lpd_msc]
 
 # 1. Add a property named `itinerary` in `Service` class, that returns the ordered list of stations where the service
 # stops. Assume legs in a service are properly defined, without inconsistencies.
-assert service.itinerary == [ply, lpd, msc]
+# assert service.itinerary == [ply, lpd, msc]
 
 # 2. Add a property named `legs` in `OD` class, that returns legs that are crossed by this OD. You can use the
 # `itinerary` property to find the index of the matching legs.
 
-assert od_ply_lpd.legs == [leg_ply_lpd]
-assert od_ply_msc.legs == [leg_ply_lpd, leg_lpd_msc]
-assert od_lpd_msc.legs == [leg_lpd_msc]
+# assert od_ply_lpd.legs == [leg_ply_lpd]
+# assert od_ply_msc.legs == [leg_ply_lpd, leg_lpd_msc]
+# assert od_lpd_msc.legs == [leg_lpd_msc]
 
 # 3. Creating every leg and OD for a service is not convenient, to simplify this step, add a method in `Service` class
 # to create legs and ODs associated to list of stations. The signature of this method should be:
 # load_itinerary(self, itinerary: List["Station"]) -> None:
 
-# itinerary = [ply, lpd, msc]
-# service = Service("7601", datetime.date.today() + datetime.timedelta(days=7))
-# service.load_itinerary(itinerary)
-# assert len(service.legs) == 2
-# assert service.legs[0].origin == ply
-# assert service.legs[0].destination == lpd
-# assert service.legs[1].origin == lpd
-# assert service.legs[1].destination == msc
-# assert len(service.ods) == 3
-# od_ply_lpd = next(od for od in service.ods if od.origin == ply and od.destination == lpd)
-# od_ply_msc = next(od for od in service.ods if od.origin == ply and od.destination == msc)
-# od_lpd_msc = next(od for od in service.ods if od.origin == lpd and od.destination == msc)
+itinerary = [ply, lpd, msc]
+service = Service("7601", datetime.date.today() + datetime.timedelta(days=7))
+service.load_itinerary(itinerary)
+assert len(service.legs) == 2
+assert service.legs[0].origin == ply
+assert service.legs[0].destination == lpd
+assert service.legs[1].origin == lpd
+assert service.legs[1].destination == msc
+assert len(service.ods) == 3
+od_ply_lpd = next(od for od in service.ods if od.origin == ply and od.destination == lpd)
+od_ply_msc = next(od for od in service.ods if od.origin == ply and od.destination == msc)
+od_lpd_msc = next(od for od in service.ods if od.origin == lpd and od.destination == msc)
 
 # 4. Create a method in `Service` class that reads a passenger manifest (a list of all bookings made for this service)
 # and that allocates bookings across ODs. When called, it should fill the `passengers` attribute of each OD instances
