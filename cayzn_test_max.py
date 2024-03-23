@@ -120,7 +120,16 @@ class OD:
         self.destination = destination
         self.passengers: List[Passenger] = []
 
-
+    @property
+    def legs(self):
+        itinerary = self.service.itinerary
+        origin_index = itinerary.index(self.origin)
+        destination_index = itinerary.index(self.destination)
+        return self.service.legs[origin_index:destination_index]
+        
+        
+        
+    
 class Passenger:
     """A passenger that has a booking on a seat for a particular origin-destination."""
 
@@ -153,9 +162,9 @@ assert service.itinerary == [ply, lpd, msc]
 # 2. Add a property named `legs` in `OD` class, that returns legs that are crossed by this OD. You can use the
 # `itinerary` property to find the index of the matching legs.
 
-# assert od_ply_lpd.legs == [leg_ply_lpd]
-# assert od_ply_msc.legs == [leg_ply_lpd, leg_lpd_msc]
-# assert od_lpd_msc.legs == [leg_lpd_msc]
+assert od_ply_lpd.legs == [leg_ply_lpd]
+assert od_ply_msc.legs == [leg_ply_lpd, leg_lpd_msc]
+assert od_lpd_msc.legs == [leg_lpd_msc]
 
 # 3. Creating every leg and OD for a service is not convenient, to simplify this step, add a method in `Service` class
 # to create legs and ODs associated to list of stations. The signature of this method should be:
