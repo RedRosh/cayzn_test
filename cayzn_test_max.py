@@ -266,11 +266,47 @@ assert history[2] == [-20, 4, 130]
 # The function that solves the problem should looks something like this
 # matrix = 1 1 8 
 #          3 2 1
-# assert max_path_finder([[1, 1, 8], [3, 2, 1]]) == 11, [(0,0) (0,1) (0,2) (1,2)]
+
+def max_path_finder(grid : List[List[int]]):
+        n,m = len(grid),len(grid[0])
+        dp = [[0] * m for _ in range(n)]
+        dp[0][0] = grid[0][0]
+        
+        for row in range(n):
+            for col in range(m):
+                if row+col == 0: continue
+                ans = float("-inf")
+                if row >0:
+                    ans= max( ans,dp[row-1][col])
+                if col >0:
+                    ans = max( ans,dp[row][col-1])
+                dp[row][col] = grid[row][col] + ans
+
+        row = n-1
+        col = m-1
+        path = []
+        while row >=0 and col >=0:
+            path.append((row,col))
+            if (row > 0 and col >0) : 
+                if dp[row-1][col] >= dp[row][col-1]:
+                    row -= 1
+                else :
+                    col -=1
+                    
+            elif ( row > 0 ) :
+                row -= 1
+            else :
+                col -=1
+        path.reverse()
+        return dp[n-1][m-1],path
+
+
+
+assert max_path_finder([[1, 1, 8], [3, 2, 1]]) == (11, [(0,0), (0,1), (0,2), (1,2)])
 # 
 # You code should pass all the following asserts
-# assert max_path_finder([[1, 2, 3], [3, 4, 5]]) == (13, [(0, 0), (1, 0), (1, 1), (1, 2)])
-# assert max_path_finder([[1, 2, 25], [3, 4, 5]]) == (33, [(0, 0), (0, 1), (0, 2), (1, 2)])
-# assert max_path_finder([[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]) == (5, [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (4, 1), (4, 2)])
-# assert max_path_finder([[1, 0, 5], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]) == (6, [(0, 0), (0, 1), (0, 2), (1, 2), (2, 2), (3, 2), (4, 2)])
-# assert max_path_finder([[1, 0, 5], [1, 0, 0], [1, 10, 1], [1, 0, 1], [1, 0, 0]]) == (15, [(0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (3, 2), (4, 2)])
+assert max_path_finder([[1, 2, 3], [3, 4, 5]]) == (13, [(0, 0), (1, 0), (1, 1), (1, 2)])
+assert max_path_finder([[1, 2, 25], [3, 4, 5]]) == (33, [(0, 0), (0, 1), (0, 2), (1, 2)])
+assert max_path_finder([[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]) == (5, [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (4, 1), (4, 2)])
+assert max_path_finder([[1, 0, 5], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]) == (6, [(0, 0), (0, 1), (0, 2), (1, 2), (2, 2), (3, 2), (4, 2)])
+assert max_path_finder([[1, 0, 5], [1, 0, 0], [1, 10, 1], [1, 0, 1], [1, 0, 0]]) == (15, [(0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (3, 2), (4, 2)])
