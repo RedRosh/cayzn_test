@@ -16,6 +16,7 @@
 
 from collections import defaultdict
 import datetime
+import itertools
 from typing import List,Dict, Tuple
 
 
@@ -46,27 +47,34 @@ class Service:
     @property
     def itinerary(self) -> List["Station"]:
         """The ordered list of stations where the service stops."""
+        
         return self._calculate_itinerary()
     
     def load_passenger_manifest(self, passengers: List["Passenger"]) -> None:
+        """Allocates bookings across Origin-Destination pairs (ODs) by reading a passenger manifest."""
+        
         for passenger in passengers:
+            # Find the corresponding OD for the passenger's origin-destination pair
             od = next(od for od in self.ods if od.origin == passenger.origin and od.destination == passenger.destination)
             od.passengers.append(passenger)
     
     def load_itinerary(self, itinerary: List["Station"]) -> None:
+        """Loads legs and Origin-Destination (OD) pairs associated with a list of stations into the service."""
         self.load_legs(itinerary)
         self.load_ods(itinerary)
 
     def load_legs(self, itinerary: List["Station"]) -> None:
-        for i in range(len(itinerary) - 1):
-            leg = Leg(self, itinerary[i], itinerary[i + 1])
+        """Creates legs between consecutive stations in the itinerary and adds them to the service."""
+        for station1, station2 in zip(itinerary, itinerary[1:]):
+            leg = Leg(self, station1, station2)
             self.legs.append(leg)
 
     def load_ods(self, itinerary: List["Station"]) -> None:
-        for origin_idx in range(len(itinerary) - 1):
-            for destination_idx in range(origin_idx + 1, len(itinerary)):
-                od = OD(self, itinerary[origin_idx], itinerary[destination_idx])
-                self.ods.append(od)
+        """Creates Origin-Destination (OD) pairs between stations in the itinerary and adds them to the service."""
+        station_combinations = itertools.combinations(itinerary, 2)
+        for origin, destination in station_combinations:
+            od = OD(self, origin, destination)
+            self.ods.append(od)
     
     def _calculate_itinerary(self) -> List["Station"]:
         """Calculate the itinerary of the service."""
@@ -75,38 +83,37 @@ class Service:
         departure, final_destination = self._find_departure_and_destination(station_occurrences, station_connections)
 
         itinerary: List[Station] = []
-        current_station:Station = departure
+        current_station = departure
 
-        while current_station != final_destination:
+        while True:
             itinerary.append(current_station)
+            if current_station == final_destination:
+                break
             current_station = station_connections[current_station]
 
-        itinerary.append(final_destination)
         return itinerary
     
     def _calculate_station_occurrences_and_connections(self) -> Tuple[Dict["Station", int], Dict["Station", "Station"]]:
         """Calculate the occurrences of each station and build a map of station connections."""
         
-        stations_occurrences: Dict["Station", int] = {}
+        stations_occurrences= defaultdict(int)
         station_connections: Dict["Station", "Station"] = {}
 
         for leg in self.legs:
-            stations_occurrences[leg.origin] = stations_occurrences.get(leg.origin, 0) + 1
-            stations_occurrences[leg.destination] = stations_occurrences.get(leg.destination, 0) + 1
+            stations_occurrences[leg.origin] += 1
+            stations_occurrences[leg.destination] += 1
             station_connections[leg.origin] = leg.destination
 
         return stations_occurrences, station_connections
 
     def _find_departure_and_destination(self, station_occurrences: Dict["Station", int], station_connections: Dict["Station", "Station"]) -> Tuple["Station", "Station"]:
-        departure_station:Station = None
-        destination_station:Station = None
-
-        for origin, destination in station_connections.items():
-            if station_occurrences[origin] == 1:
-                departure_station = origin
-            if station_occurrences[destination] == 1:
-                destination_station = destination
-
+        """Find the departure and destination of a service"""
+        
+        # Find the departure station by locating the origin station in station_connections where its occurrence count is 1
+        departure_station = next(origin for origin, _ in station_connections.items() if station_occurrences[origin] == 1)
+        
+        # Find the destination station by locating the destination station in station_connections where its occurrence count is 1
+        destination_station = next(destination for _, destination in station_connections.items() if station_occurrences[destination] == 1)
         return departure_station, destination_station
       
 
@@ -130,6 +137,7 @@ class Leg:
     
     @property
     def passengers(self) -> List["Passenger"]:
+        # Retrieve passengers from all ODs associated with this leg and remove duplicates if any using a set 
         passengers_set = set({passenger for od in self.service.ods if self in od.legs for passenger in od.passengers})
         return list(passengers_set)
 
@@ -148,21 +156,27 @@ class OD:
 
     @property
     def legs(self):
+        """Returns the list of legs between the origin and destination stations."""
         itinerary = self.service.itinerary
         origin_index = itinerary.index(self.origin)
         destination_index = itinerary.index(self.destination)
         return self.service.legs[origin_index:destination_index]
     
     def history(self):
+        """Generates a report about sales made each day."""
+        
         history_map = defaultdict(lambda: [0, 0.0])
 
         for passenger in self.passengers:
+            # Update the cumulative bookings and revenue for the sale day of the passenger
             history_map[passenger.sale_day_x][0] += 1
             history_map[passenger.sale_day_x][1] += passenger.price
 
+        # Sort the history_map by sale day and convert it to a list of lists
         history_list = sorted([[sale_day_x, info[0], info[1]] for sale_day_x, info in history_map.items()])
         
-        for i  in range(1,len(history_list)):
+        # Calculate cumulative bookings and revenue for each sale_day
+        for i in range(1,len(history_list)):
             history_list[i][1] += history_list[i-1][1] 
             history_list[i][2] += history_list[i-1][2] 
 
@@ -267,6 +281,26 @@ assert history[2] == [-20, 4, 130]
 # matrix = 1 1 8 
 #          3 2 1
 
+def path_finder(dp: List[List[int]]) -> List[Tuple[int, int]]:
+    """Finds the path based on a dp table."""
+    
+    n, m = len(dp), len(dp[0])
+    row, col = n - 1, m - 1
+    path = []
+    
+    
+    # If there is a row above and either no column left ( initial position) or the value above is greater or equal to the value to the left,
+    # move up (decrement row); otherwise, move left (decrement col).
+    while row >= 0 and col >= 0:
+        path.append((row, col))
+        if row > 0 and (col == 0 or dp[row - 1][col] >= dp[row][col - 1]):
+            row -= 1
+        else:
+            col -= 1
+
+    path.reverse()
+    return path
+
 def max_path_finder(grid : List[List[int]]):
         n,m = len(grid),len(grid[0])
         dp = [[0] * m for _ in range(n)]
@@ -274,30 +308,20 @@ def max_path_finder(grid : List[List[int]]):
         
         for row in range(n):
             for col in range(m):
+                # skip the starting point
                 if row+col == 0: continue
                 ans = float("-inf")
+                
+                # determine the maximum value between the top and left directions
                 if row >0:
                     ans= max( ans,dp[row-1][col])
                 if col >0:
                     ans = max( ans,dp[row][col-1])
+                
+                # Update the current cell with the maximum value plus the current value from the grid
                 dp[row][col] = grid[row][col] + ans
 
-        row = n-1
-        col = m-1
-        path = []
-        while row >=0 and col >=0:
-            path.append((row,col))
-            if (row > 0 and col >0) : 
-                if dp[row-1][col] >= dp[row][col-1]:
-                    row -= 1
-                else :
-                    col -=1
-                    
-            elif ( row > 0 ) :
-                row -= 1
-            else :
-                col -=1
-        path.reverse()
+        path = path_finder(dp)
         return dp[n-1][m-1],path
 
 
